@@ -3,11 +3,12 @@ import hashlib
 import secrets
 import time
 
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, Depends, Request, Response
 from pydantic import BaseModel, Field
 
 from prontuario.acesso import usuarios
-from prontuario.acesso.politica import publica
+from prontuario.acesso.politica import autenticada, publica
+from prontuario.acesso.sessoes import encerrar, iniciar
 from prontuario.acesso.senhas import HASH_FICTICIO, MAX, motivo_de_recusa, senhas
 from prontuario.compartilhado.banco import consultar, executar
 from prontuario.compartilhado.erros import BadRequestError, UnauthorizedError
@@ -28,7 +29,7 @@ class Login(BaseModel):
 
 
 @router.post("/api/auth/login", dependencies=[Depends(publica())])
-def login(dados: Login):
+def login(dados: Login, request: Request, response: Response):
     u = usuarios.por_email(dados.email)
     if u is None:
         senhas.verify(dados.senha, HASH_FICTICIO)   # mesmo custo
@@ -38,7 +39,20 @@ def login(dados: Login):
         raise UnauthorizedError(FALHA)
     if novo_hash:                    # parâmetros antigos: refaz o hash
         usuarios.trocar_hash(u["id"], novo_hash)
+    iniciar(request, response, u["id"])
     return {"usuario": usuarios.publico(u)}
+
+
+@router.post("/api/auth/logout", status_code=204, dependencies=[Depends(autenticada())])
+def logout(request: Request):
+    resposta = Response(status_code=204)
+    encerrar(request, resposta)
+    return resposta
+
+
+@router.get("/api/auth/me")
+def me(usuario: dict = Depends(autenticada())):
+    return {"usuario": usuarios.publico(usuario)}
 
 
 class Solicitacao(BaseModel):

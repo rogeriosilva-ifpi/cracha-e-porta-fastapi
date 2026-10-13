@@ -7,18 +7,20 @@ from prontuario.acesso import usuarios
 from prontuario.app import criar_app
 from prontuario.auth.rotas import caixa_de_saida
 from prontuario.compartilhado.banco import executar
+from tests.ajuda import entrar
 
 cli = TestClient(criar_app())
-ADMIN = {"X-Usuario-Demo": "admin@hospital.dev"}
 
 
 def novo(email, senha):
-    return cli.post("/api/admin/users", headers=ADMIN,
+    return cli.post("/api/admin/users", headers=entrar(cli, "admin@hospital.dev"),
                     json={"nome": "Teste", "email": email, "papel": "recepcao", "senha": senha})
 
 
 def login(email, senha):
-    return cli.post("/api/auth/login", json={"email": email, "senha": senha})
+    r = cli.post("/api/auth/login", json={"email": email, "senha": senha})
+    cli.cookies.clear()
+    return r
 
 
 def test_politica_recusa_curta_comum_e_com_email():

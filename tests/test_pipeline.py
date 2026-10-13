@@ -1,12 +1,13 @@
 from fastapi.testclient import TestClient
 
 from prontuario.app import criar_app
+from tests.ajuda import entrar
 
 cli = TestClient(criar_app())
 
 
 def como(email: str) -> dict:
-    return {"X-Usuario-Demo": email}
+    return entrar(cli, email)
 
 
 def test_rota_publica_sem_cracha():

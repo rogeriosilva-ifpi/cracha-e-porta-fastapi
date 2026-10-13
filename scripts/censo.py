@@ -7,7 +7,8 @@ from prontuario.app import criar_app
 linhas = levantar(criar_app())
 for l in linhas:
     p = ("— NENHUMA —" if l.politica is None
-         else "pública" if l.politica.get("publica") else l.politica["permissao"])
+         else "pública" if l.politica.get("publica")
+         else "autenticada" if l.politica.get("autenticada") else l.politica["permissao"])
     linha = f"{l.metodo:<6} {l.caminho}"
     print(f"{linha:<29}{p}" if len(linha) <= 28 else f"{linha}\n{'':<29}{p}")
 erros = problemas(linhas)
