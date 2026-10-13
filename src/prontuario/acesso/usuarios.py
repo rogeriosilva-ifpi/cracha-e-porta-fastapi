@@ -37,6 +37,10 @@ def criar(u: dict) -> dict:
     return u
 
 
+def trocar_papel(id_: str, papel: str) -> None:
+    executar("UPDATE usuarios SET papel = ? WHERE id = ?", papel, id_)
+
+
 def trocar_hash(id_: str, hash_: str) -> None:
     executar("UPDATE usuarios SET password_hash = ? WHERE id = ?", hash_, id_)
 

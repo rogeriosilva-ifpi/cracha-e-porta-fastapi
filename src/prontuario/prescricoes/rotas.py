@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
-from prontuario.acesso.politica import exige
+from prontuario.acesso.politica import autenticada, exige
 from prontuario.compartilhado.dados import buscar, db, novo_id
-from prontuario.compartilhado.erros import NotFoundError
+from prontuario.compartilhado.erros import ForbiddenError, NotFoundError
 
 router = APIRouter()
 
@@ -29,3 +29,14 @@ def prescrever(id: str, dados: NovaPrescricao):
     m = {"id": novo_id("m"), "atendimentoId": e["id"], **dados.model_dump()}
     db.prescricoes.append(m)
     return m
+
+
+# Relatório: prescrições por profissional. VERSÃO INGÊNUA (cap11-antes).
+@router.get("/api/reports/prescriptions")
+def relatorio(usuario: dict = Depends(autenticada())):
+    if usuario["papel"] not in ("admin", "profissional"):
+        raise ForbiddenError()
+    por_profissional: dict[str, int] = {}
+    for m in db.prescricoes:
+        por_profissional[m["profissionalId"]] = por_profissional.get(m["profissionalId"], 0) + 1
+    return por_profissional
