@@ -26,3 +26,5 @@ C-P-T-R-F-A e revisão). Leia na branch principal.
 | carla@hospital.dev | rede-na-varanda-de-tarde |
 
 Só existem para o laboratório. O banco sobe em memória e é recriado a cada início.
+
+`laboratorio/cripto.py` (capítulo 2) e `cronometro.py` (capítulo 4) são instrumentos do livro.

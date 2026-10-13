@@ -8,7 +8,12 @@ from fastapi import FastAPI
 from fastapi.routing import APIRoute, iter_route_contexts
 
 # Rotas que podem ser públicas. Acrescentar aqui exige revisão.
-PUBLICAS = {"GET /health", "POST /api/auth/login"}
+PUBLICAS = {
+    "GET /health",
+    "POST /api/auth/login",
+    "POST /api/auth/reset/solicitar",
+    "POST /api/auth/reset/confirmar",
+}
 
 
 @dataclass

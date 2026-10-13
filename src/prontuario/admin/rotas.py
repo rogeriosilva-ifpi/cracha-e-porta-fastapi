@@ -5,7 +5,8 @@ from pydantic import BaseModel, Field
 
 from prontuario.acesso import usuarios
 from prontuario.acesso.politica import exige
-from prontuario.acesso.senhas import senhas
+from prontuario.acesso.senhas import motivo_de_recusa, senhas
+from prontuario.compartilhado.erros import BadRequestError
 from prontuario.compartilhado.dados import novo_id
 
 router = APIRouter()
@@ -27,4 +28,7 @@ def listar():
 def criar(dados: NovoUsuario):
     d = dados.model_dump()
     senha = d.pop("senha")
+    motivo = motivo_de_recusa(senha, d["email"])
+    if motivo:
+        raise BadRequestError(motivo)
     return usuarios.criar({"id": novo_id("u"), **d, "passwordHash": senhas.hash(senha)})

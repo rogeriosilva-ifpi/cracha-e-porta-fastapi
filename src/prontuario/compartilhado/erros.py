@@ -10,6 +10,10 @@ class HttpError(Exception):
         self.mensagem = mensagem or self.mensagem
 
 
+class BadRequestError(HttpError):
+    status, mensagem = 400, "Requisição inválida."
+
+
 class UnauthorizedError(HttpError):
     status, mensagem = 401, "Não autenticado."
 
