@@ -3,15 +3,14 @@ import hashlib
 import secrets
 import time
 
-import jwt
 from fastapi import APIRouter, Depends, Request, Response
 from pydantic import BaseModel, Field
 
 from prontuario.acesso import usuarios
 from prontuario.acesso.politica import autenticada, publica
 from prontuario.acesso.sessoes import encerrar, encerrar_todas, iniciar
-from prontuario.acesso.tokens import (ACCESS_S, AUDIENCIA, emissor, emitir_access,
-                                      jwks, verificar_access)
+from prontuario.acesso.refresh import abrir_familia, girar, revogar_familia, revogar_todas
+from prontuario.acesso.tokens import ACCESS_S, emitir_access, jwks
 from prontuario.acesso.senhas import HASH_FICTICIO, MAX, motivo_de_recusa, senhas
 from prontuario.compartilhado.banco import consultar, executar
 from prontuario.compartilhado.erros import BadRequestError, UnauthorizedError
@@ -45,13 +44,10 @@ def conferir(dados: Login) -> dict:
     return u
 
 
-# VERSÃO INGÊNUA (tag cap07-antes): o refresh é um JWT de 30 dias.
-emitir_refresh = emissor(AUDIENCIA, 30 * 24 * 3600)
-
-
-def par(usuario_id: str) -> dict:
-    return {"access_token": emitir_access(usuario_id), "token_type": "Bearer",
-            "expires_in": ACCESS_S, "refresh_token": emitir_refresh(usuario_id)}
+def par(usuario_id: str, familia: str, refresh: str) -> dict:
+    """Access curto (JWT, carrega a família em sid) + refresh opaco."""
+    return {"access_token": emitir_access(usuario_id, {"sid": familia}),
+            "token_type": "Bearer", "expires_in": ACCESS_S, "refresh_token": refresh}
 
 
 # Navegador: sessão em cookie (capítulo 5).
@@ -66,7 +62,8 @@ def login(dados: Login, request: Request, response: Response):
 @router.post("/api/auth/token", dependencies=[Depends(publica())])
 def token(dados: Login):
     u = conferir(dados)
-    return par(u["id"])
+    familia, refresh = abrir_familia(u["id"])
+    return par(u["id"], familia, refresh)
 
 
 class Renovacao(BaseModel):
@@ -76,17 +73,17 @@ class Renovacao(BaseModel):
 # Troca o refresh por um par novo (capítulo 7).
 @router.post("/api/auth/refresh", dependencies=[Depends(publica())])
 def renovar(dados: Renovacao):
-    try:
-        p = verificar_access(dados.refresh_token)
-    except jwt.InvalidTokenError:
+    g = girar(dados.refresh_token)
+    if g is None:
         raise UnauthorizedError()
-    return par(p["sub"])
+    return par(g["usuario_id"], g["familia"], g["refresh"])
 
 
 # "Sair de todos os dispositivos".
 @router.post("/api/auth/logout-all", status_code=204)
 def sair_de_todos(usuario: dict = Depends(autenticada())):
-    encerrar_todas(usuario["id"])
+    encerrar_todas(usuario["id"])     # cookies
+    revogar_todas(usuario["id"])      # apps
     return Response(status_code=204)
 
 
@@ -99,7 +96,11 @@ def chaves_publicas():
 @router.post("/api/auth/logout", status_code=204, dependencies=[Depends(autenticada())])
 def logout(request: Request):
     resposta = Response(status_code=204)
-    encerrar(request, resposta)
+    familia = getattr(request.state, "familia", None)
+    if familia:
+        revogar_familia(familia)      # app: só este
+    else:
+        encerrar(request, resposta)   # navegador
     return resposta
 
 
@@ -141,4 +142,5 @@ def confirmar(dados: Confirmacao):
     executar("UPDATE redefinicoes SET usado = 1 WHERE token_hash = ?", sha256(dados.token))
     usuarios.trocar_hash(u["id"], senhas.hash(dados.novaSenha))
     encerrar_todas(u["id"])          # senha nova derruba sessões antigas
+    revogar_todas(u["id"])           # e os apps conectados
     return Response(status_code=204)

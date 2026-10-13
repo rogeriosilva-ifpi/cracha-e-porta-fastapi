@@ -33,7 +33,7 @@ def test_cabecalho_eddsa_kid_typ():
 def test_so_identificadores_10_minutos():
     t = token()
     p = jwt.decode(t["access_token"], options={"verify_signature": False})
-    assert sorted(p) == ["aud", "exp", "iat", "iss", "jti", "sub"]
+    assert sorted(p) == ["aud", "exp", "iat", "iss", "jti", "sid", "sub"]
     assert p["exp"] - p["iat"] == 600 and t["expires_in"] == 600
 
 
