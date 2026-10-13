@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from prontuario.acesso import usuarios
 from prontuario.acesso.politica import autenticada, publica
 from prontuario.acesso.sessoes import encerrar, encerrar_todas, iniciar
-from prontuario.acesso.tokens import emitir_access
+from prontuario.acesso.tokens import ACCESS_S, emitir_access, jwks
 from prontuario.acesso.senhas import HASH_FICTICIO, MAX, motivo_de_recusa, senhas
 from prontuario.compartilhado.banco import consultar, executar
 from prontuario.compartilhado.erros import BadRequestError, UnauthorizedError
@@ -55,7 +55,14 @@ def login(dados: Login, request: Request, response: Response):
 @router.post("/api/auth/token", dependencies=[Depends(publica())])
 def token(dados: Login):
     u = conferir(dados)
-    return {"access_token": emitir_access(u), "token_type": "Bearer"}
+    return {"access_token": emitir_access(u["id"]), "token_type": "Bearer",
+            "expires_in": ACCESS_S}
+
+
+# Chaves públicas: quem confere nossos tokens busca aqui.
+@router.get("/.well-known/jwks.json", dependencies=[Depends(publica())])
+def chaves_publicas():
+    return jwks()
 
 
 @router.post("/api/auth/logout", status_code=204, dependencies=[Depends(autenticada())])

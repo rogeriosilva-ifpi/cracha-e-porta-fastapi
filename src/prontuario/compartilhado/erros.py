@@ -1,4 +1,4 @@
-"""Hierarquia de erros HTTP do curso, com 401 e 403 do Tópico 3."""
+"""Hierarquia de erros HTTP: cada erro sabe seu status."""
 
 
 class HttpError(Exception):
