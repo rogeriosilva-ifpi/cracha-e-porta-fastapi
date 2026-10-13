@@ -1,29 +1,14 @@
-"""Dados em memória do Mini-Prontuário. O banco entra no capítulo 4."""
+"""Dados clínicos em memória. Usuários e credenciais moram no SQLite
+(compartilhado/banco.py) desde o capítulo 4."""
 from dataclasses import dataclass, field
 from itertools import count
 from typing import Literal
 
 Papel = Literal["admin", "profissional", "recepcao"]
-HASH = "$argon2id$v=19$m=19456,t=2,p=1$c2FsdGRlbW8$aGFzaGlsdXN0cmF0aXZv"  # ilustrativo
-
-
-@dataclass
-class Usuario:
-    id: str
-    nome: str
-    email: str
-    papel: Papel
-    passwordHash: str = HASH  # os hashes reais nascem no cap. 4
 
 
 @dataclass
 class Banco:
-    usuarios: list[dict] = field(default_factory=lambda: [
-        {"id": "u1", "nome": "Admin Geral", "email": "admin@hospital.dev", "papel": "admin", "passwordHash": HASH},
-        {"id": "u2", "nome": "Dra. Ana", "email": "ana@hospital.dev", "papel": "profissional", "passwordHash": HASH},
-        {"id": "u3", "nome": "Dr. Bruno", "email": "bruno@hospital.dev", "papel": "profissional", "passwordHash": HASH},
-        {"id": "u4", "nome": "Carla", "email": "carla@hospital.dev", "papel": "recepcao", "passwordHash": HASH},
-    ])
     pacientes: list[dict] = field(default_factory=lambda: [
         {"id": "p1", "nome": "Maria Souza", "cns": "898001234567890", "nascimento": "1958-03-14"},
         {"id": "p2", "nome": "João Lima", "cns": "898009876543210", "nascimento": "1990-11-02"},

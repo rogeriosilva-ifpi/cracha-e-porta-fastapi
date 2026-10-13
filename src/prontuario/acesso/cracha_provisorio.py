@@ -6,9 +6,9 @@ e token (cap. 6). O ataque ATQ-01.11 continua vulnerável até lá.
 """
 from fastapi import Request
 
-from prontuario.compartilhado.dados import db
+from prontuario.acesso import usuarios
 
 
 def identificar(request: Request) -> dict | None:
     email = request.headers.get("X-Usuario-Demo")
-    return next((u for u in db.usuarios if u["email"] == email), None) if email else None
+    return usuarios.por_email(email) if email else None

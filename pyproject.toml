@@ -2,7 +2,11 @@
 name = "prontuario-fastapi"
 version = "0.1.0"
 requires-python = ">=3.12"
-dependencies = ["fastapi>=0.115", "uvicorn>=0.30"]
+dependencies = [
+    "fastapi>=0.115",
+    "pwdlib[argon2]>=0.3.1",
+    "uvicorn>=0.30",
+]
 
 [dependency-groups]
 dev = [
