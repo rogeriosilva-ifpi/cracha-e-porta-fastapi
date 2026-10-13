@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 from prontuario.acesso import usuarios
 from prontuario.acesso.politica import autenticada, publica
 from prontuario.acesso.sessoes import encerrar, encerrar_todas, iniciar
+from prontuario.acesso.tokens import emitir_access
 from prontuario.acesso.senhas import HASH_FICTICIO, MAX, motivo_de_recusa, senhas
 from prontuario.compartilhado.banco import consultar, executar
 from prontuario.compartilhado.erros import BadRequestError, UnauthorizedError
@@ -28,8 +29,8 @@ class Login(BaseModel):
     senha: str = Field(max_length=MAX)
 
 
-@router.post("/api/auth/login", dependencies=[Depends(publica())])
-def login(dados: Login, request: Request, response: Response):
+def conferir(dados: Login) -> dict:
+    """Confere e-mail e senha (capítulo 4). Toda falha é a mesma."""
     u = usuarios.por_email(dados.email)
     if u is None:
         senhas.verify(dados.senha, HASH_FICTICIO)   # mesmo custo
@@ -39,8 +40,22 @@ def login(dados: Login, request: Request, response: Response):
         raise UnauthorizedError(FALHA)
     if novo_hash:                    # parâmetros antigos: refaz o hash
         usuarios.trocar_hash(u["id"], novo_hash)
+    return u
+
+
+# Navegador: sessão em cookie (capítulo 5).
+@router.post("/api/auth/login", dependencies=[Depends(publica())])
+def login(dados: Login, request: Request, response: Response):
+    u = conferir(dados)
     iniciar(request, response, u["id"])
     return {"usuario": usuarios.publico(u)}
+
+
+# Clientes de API (app, integrações): token Bearer (capítulo 6).
+@router.post("/api/auth/token", dependencies=[Depends(publica())])
+def token(dados: Login):
+    u = conferir(dados)
+    return {"access_token": emitir_access(u), "token_type": "Bearer"}
 
 
 @router.post("/api/auth/logout", status_code=204, dependencies=[Depends(autenticada())])

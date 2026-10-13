@@ -5,7 +5,7 @@ O censo (scripts/censo.py e tests/test_censo.py) lê o atributo
 """
 from fastapi import Request
 
-from prontuario.acesso.sessoes import identificar
+from prontuario.acesso.identidade import identificar
 from prontuario.acesso.permissoes import Permissao, pode
 from prontuario.compartilhado.erros import ForbiddenError, UnauthorizedError
 

@@ -11,6 +11,7 @@ from fastapi.routing import APIRoute, iter_route_contexts
 PUBLICAS = {
     "GET /health",
     "POST /api/auth/login",
+    "POST /api/auth/token",
     "POST /api/auth/reset/solicitar",
     "POST /api/auth/reset/confirmar",
 }
