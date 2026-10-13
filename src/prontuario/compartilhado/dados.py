@@ -33,3 +33,11 @@ def novo_id(prefixo: str) -> str:
 
 def buscar(lista: list[dict], id_: str) -> dict | None:
     return next((x for x in lista if x["id"] == id_), None)
+
+
+# Escala de plantões (capítulo 10): horário local, pode virar a meia-noite.
+escala = [
+    {"usuario_id": "u2", "inicio": "07:00", "fim": "19:00"},   # Ana, diurno
+    {"usuario_id": "u3", "inicio": "19:00", "fim": "07:00"},   # Bruno, noturno
+    {"usuario_id": "u5", "inicio": "07:00", "fim": "19:00"},   # Eva, diurno
+]

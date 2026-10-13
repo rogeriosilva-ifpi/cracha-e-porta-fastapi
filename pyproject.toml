@@ -3,6 +3,7 @@ name = "prontuario-fastapi"
 version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
+    "cedarpy>=4.12.1",
     "fastapi>=0.115",
     "pwdlib[argon2]>=0.3.1",
     "pyjwt[crypto]>=2.15.1",
