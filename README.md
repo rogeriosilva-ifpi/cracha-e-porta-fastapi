@@ -28,3 +28,14 @@ C-P-T-R-F-A e revisão). Leia na branch principal.
 Só existem para o laboratório. O banco sobe em memória e é recriado a cada início.
 
 `laboratorio/cripto.py` (capítulo 2) e `cronometro.py` (capítulo 4) são instrumentos do livro.
+
+## Tokens de API (capítulos 6 e 7)
+
+```bash
+python raiox.py --login http://localhost:3000 ana@hospital.dev cajueiro-em-flor-no-quintal
+```
+
+`POST /api/auth/token` devolve access (JWT EdDSA, 10 min) e refresh
+(opaco, com rotação); `POST /api/auth/refresh` troca o refresh;
+`POST /api/auth/logout-all` sai de todos os dispositivos; as chaves
+públicas ficam em `/.well-known/jwks.json`. O `raiox.py` só lê o token.
