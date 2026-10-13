@@ -5,6 +5,10 @@ from prontuario.acesso.censo import levantar, problemas
 from prontuario.app import criar_app
 
 linhas = levantar(criar_app())
+if "--json" in sys.argv:          # para o matriz.py (cap. 11)
+    import json
+    print(json.dumps([vars(l) for l in linhas], ensure_ascii=False))
+    sys.exit(0)
 for l in linhas:
     p = ("— NENHUMA —" if l.politica is None
          else "pública" if l.politica.get("publica")

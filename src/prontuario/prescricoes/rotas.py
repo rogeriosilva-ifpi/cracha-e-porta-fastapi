@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
-from prontuario.acesso.politica import autenticada, exige
+from prontuario.acesso.politica import exige
 from prontuario.compartilhado.dados import buscar, db, novo_id
-from prontuario.compartilhado.erros import ForbiddenError, NotFoundError
+from prontuario.compartilhado.erros import NotFoundError
 
 router = APIRouter()
 
@@ -31,11 +31,9 @@ def prescrever(id: str, dados: NovaPrescricao):
     return m
 
 
-# Relatório: prescrições por profissional. VERSÃO INGÊNUA (cap11-antes).
-@router.get("/api/reports/prescriptions")
-def relatorio(usuario: dict = Depends(autenticada())):
-    if usuario["papel"] not in ("admin", "profissional"):
-        raise ForbiddenError()
+# Relatório: prescrições por profissional. A permissão mora na matriz.
+@router.get("/api/reports/prescriptions", dependencies=[Depends(exige("rx:read"))])
+def relatorio():
     por_profissional: dict[str, int] = {}
     for m in db.prescricoes:
         por_profissional[m["profissionalId"]] = por_profissional.get(m["profissionalId"], 0) + 1

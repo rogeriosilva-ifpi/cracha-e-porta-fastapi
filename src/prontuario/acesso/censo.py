@@ -52,4 +52,7 @@ def problemas(linhas: list[Linha]) -> list[str]:
             erros.append(f"{rota}: sem política declarada")
         elif l.politica.get("publica") and rota not in PUBLICAS:
             erros.append(f"{rota}: pública sem estar em PUBLICAS")
+        # "Basta estar logado" só vale para a própria conta (cap. 11).
+        elif l.politica.get("autenticada") and not l.caminho.startswith("/api/auth/"):
+            erros.append(f"{rota}: só autenticada; declare uma permissão")
     return erros
