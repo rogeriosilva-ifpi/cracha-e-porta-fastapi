@@ -1,7 +1,9 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
+from prontuario.acesso.politica import exige
 from prontuario.compartilhado.dados import buscar, db, novo_id
+from prontuario.compartilhado.erros import NotFoundError
 
 router = APIRouter()
 
@@ -12,18 +14,18 @@ class NovaPrescricao(BaseModel):
     profissionalId: str  # quem prescreve vem do corpo (por enquanto)
 
 
-@router.get("/api/medication-requests")
+@router.get("/api/medication-requests", dependencies=[Depends(exige("rx:read"))])
 def listar(encounterId: str | None = None):
     if encounterId:
         return [m for m in db.prescricoes if m["atendimentoId"] == encounterId]
     return db.prescricoes
 
 
-@router.post("/api/encounters/{id}/medication-requests", status_code=201)
+@router.post("/api/encounters/{id}/medication-requests", status_code=201, dependencies=[Depends(exige("rx:create"))])
 def prescrever(id: str, dados: NovaPrescricao):
     e = buscar(db.atendimentos, id)
     if e is None:
-        raise HTTPException(404, "Recurso não encontrado.")
+        raise NotFoundError()
     m = {"id": novo_id("m"), "atendimentoId": e["id"], **dados.model_dump()}
     db.prescricoes.append(m)
     return m
