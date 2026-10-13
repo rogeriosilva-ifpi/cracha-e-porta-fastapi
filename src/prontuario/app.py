@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from prontuario.acesso.politica import publica
 from prontuario.admin import rotas as admin
 from prontuario.atendimentos import rotas as atendimentos
+from prontuario.auth import oidc
 from prontuario.auth import rotas as auth
 from prontuario.http import erros, origem
 from prontuario.pacientes import rotas as pacientes
@@ -41,7 +42,7 @@ def criar_app() -> FastAPI:
     def health():
         return {"status": "ok"}
 
-    for m in (pacientes, atendimentos, prescricoes, admin, auth):
+    for m in (pacientes, atendimentos, prescricoes, admin, auth, oidc):
         app.include_router(m.router)
 
     erros.instalar(app)  # FIM DO PIPELINE: todo erro passa por aqui

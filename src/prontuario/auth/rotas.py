@@ -9,6 +9,8 @@ from pydantic import BaseModel, Field
 from prontuario.acesso import usuarios
 from prontuario.acesso.politica import autenticada, publica
 from prontuario.acesso.sessoes import encerrar, encerrar_todas, iniciar
+from prontuario.acesso.mfa import (abrir_desafio, ativar, iniciar_cadastro, mfa_ativo,
+                                   resolver_desafio)
 from prontuario.acesso.refresh import abrir_familia, girar, revogar_familia, revogar_todas
 from prontuario.acesso.tokens import ACCESS_S, emitir_access, jwks
 from prontuario.acesso.senhas import HASH_FICTICIO, MAX, motivo_de_recusa, senhas
@@ -54,6 +56,8 @@ def par(usuario_id: str, familia: str, refresh: str) -> dict:
 @router.post("/api/auth/login", dependencies=[Depends(publica())])
 def login(dados: Login, request: Request, response: Response):
     u = conferir(dados)
+    if mfa_ativo(u["id"]):            # senha certa ainda não é login
+        return {"mfa_requerido": True, "desafio": abrir_desafio(u["id"], "cookie")}
     iniciar(request, response, u["id"])
     return {"usuario": usuarios.publico(u)}
 
@@ -62,8 +66,49 @@ def login(dados: Login, request: Request, response: Response):
 @router.post("/api/auth/token", dependencies=[Depends(publica())])
 def token(dados: Login):
     u = conferir(dados)
+    if mfa_ativo(u["id"]):
+        return {"mfa_requerido": True, "desafio": abrir_desafio(u["id"], "token")}
     familia, refresh = abrir_familia(u["id"])
     return par(u["id"], familia, refresh)
+
+
+class Verificacao(BaseModel):
+    desafio: str = Field(max_length=100)
+    codigo: str = Field(max_length=20)
+
+
+# Segundo passo do login de quem tem MFA (capítulo 8).
+@router.post("/api/auth/mfa/verificar", dependencies=[Depends(publica())])
+def verificar_mfa(dados: Verificacao, request: Request, response: Response):
+    r = resolver_desafio(dados.desafio, dados.codigo.strip())
+    if r is None:
+        raise UnauthorizedError("Código inválido.")
+    if r["canal"] == "cookie":
+        iniciar(request, response, r["usuario_id"])
+        return {"usuario": usuarios.publico(usuarios.por_id(r["usuario_id"]))}
+    familia, refresh = abrir_familia(r["usuario_id"])
+    return par(r["usuario_id"], familia, refresh)
+
+
+# Cadastro do segundo fator, por quem já está logado.
+@router.post("/api/auth/mfa/cadastro")
+def cadastrar_mfa(usuario: dict = Depends(autenticada())):
+    c = iniciar_cadastro(usuario["id"], usuario["email"])
+    if c is None:
+        raise BadRequestError("O segundo fator já está ativo.")
+    return c
+
+
+class Ativacao(BaseModel):
+    codigo: str = Field(max_length=10)
+
+
+@router.post("/api/auth/mfa/ativar")
+def ativar_mfa(dados: Ativacao, usuario: dict = Depends(autenticada())):
+    codigos = ativar(usuario["id"], dados.codigo.strip())
+    if codigos is None:
+        raise BadRequestError("Código inválido.")
+    return {"codigos_recuperacao": codigos}
 
 
 class Renovacao(BaseModel):
