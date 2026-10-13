@@ -1,4 +1,4 @@
-"""Dados em memória do Mini-Prontuário. O banco entra no capítulo 3."""
+"""Dados em memória do Mini-Prontuário. O banco entra no capítulo 4."""
 from dataclasses import dataclass, field
 from itertools import count
 from typing import Literal
@@ -13,7 +13,7 @@ class Usuario:
     nome: str
     email: str
     papel: Papel
-    passwordHash: str = HASH  # os hashes reais nascem no cap. 3
+    passwordHash: str = HASH  # os hashes reais nascem no cap. 4
 
 
 @dataclass

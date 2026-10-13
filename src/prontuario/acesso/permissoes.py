@@ -1,6 +1,6 @@
 """Matriz de permissões do Mini-Prontuário (contrato do Tópico 3).
 
-Fonte única: rotas e testes leem daqui. O cap. 10 discute quando
+Fonte única: rotas e testes leem daqui. O cap. 11 discute quando
 ela deve sair do código e ir para o banco.
 """
 from typing import Literal

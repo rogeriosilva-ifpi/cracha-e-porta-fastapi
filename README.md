@@ -5,6 +5,7 @@ Laboratório do ebook **Crachá & Porta** — stack FastAPI + Python.
 Cada capítulo é uma tag: `git checkout cap01`, `git checkout cap02`…
 
 ```bash
+uv run python laboratorio/cripto.py  # capítulo 2
 uv sync
 uv run uvicorn prontuario.app:app --port 8000 --no-server-header
 uv run pytest
