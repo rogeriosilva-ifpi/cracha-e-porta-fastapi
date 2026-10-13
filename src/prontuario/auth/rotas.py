@@ -3,13 +3,15 @@ import hashlib
 import secrets
 import time
 
+import jwt
 from fastapi import APIRouter, Depends, Request, Response
 from pydantic import BaseModel, Field
 
 from prontuario.acesso import usuarios
 from prontuario.acesso.politica import autenticada, publica
 from prontuario.acesso.sessoes import encerrar, encerrar_todas, iniciar
-from prontuario.acesso.tokens import ACCESS_S, emitir_access, jwks
+from prontuario.acesso.tokens import (ACCESS_S, AUDIENCIA, emissor, emitir_access,
+                                      jwks, verificar_access)
 from prontuario.acesso.senhas import HASH_FICTICIO, MAX, motivo_de_recusa, senhas
 from prontuario.compartilhado.banco import consultar, executar
 from prontuario.compartilhado.erros import BadRequestError, UnauthorizedError
@@ -43,6 +45,15 @@ def conferir(dados: Login) -> dict:
     return u
 
 
+# VERSÃO INGÊNUA (tag cap07-antes): o refresh é um JWT de 30 dias.
+emitir_refresh = emissor(AUDIENCIA, 30 * 24 * 3600)
+
+
+def par(usuario_id: str) -> dict:
+    return {"access_token": emitir_access(usuario_id), "token_type": "Bearer",
+            "expires_in": ACCESS_S, "refresh_token": emitir_refresh(usuario_id)}
+
+
 # Navegador: sessão em cookie (capítulo 5).
 @router.post("/api/auth/login", dependencies=[Depends(publica())])
 def login(dados: Login, request: Request, response: Response):
@@ -55,8 +66,28 @@ def login(dados: Login, request: Request, response: Response):
 @router.post("/api/auth/token", dependencies=[Depends(publica())])
 def token(dados: Login):
     u = conferir(dados)
-    return {"access_token": emitir_access(u["id"]), "token_type": "Bearer",
-            "expires_in": ACCESS_S}
+    return par(u["id"])
+
+
+class Renovacao(BaseModel):
+    refresh_token: str = Field(max_length=2000)
+
+
+# Troca o refresh por um par novo (capítulo 7).
+@router.post("/api/auth/refresh", dependencies=[Depends(publica())])
+def renovar(dados: Renovacao):
+    try:
+        p = verificar_access(dados.refresh_token)
+    except jwt.InvalidTokenError:
+        raise UnauthorizedError()
+    return par(p["sub"])
+
+
+# "Sair de todos os dispositivos".
+@router.post("/api/auth/logout-all", status_code=204)
+def sair_de_todos(usuario: dict = Depends(autenticada())):
+    encerrar_todas(usuario["id"])
+    return Response(status_code=204)
 
 
 # Chaves públicas: quem confere nossos tokens busca aqui.
