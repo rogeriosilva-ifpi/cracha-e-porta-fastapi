@@ -7,7 +7,7 @@ from prontuario.acesso.politica import publica
 from prontuario.admin import rotas as admin
 from prontuario.atendimentos import rotas as atendimentos
 from prontuario.auth import rotas as auth
-from prontuario.http import erros
+from prontuario.http import erros, origem
 from prontuario.pacientes import rotas as pacientes
 from prontuario.prescricoes import rotas as prescricoes
 
@@ -26,6 +26,8 @@ def criar_app() -> FastAPI:
                        allow_credentials=True,
                        allow_methods=["GET", "POST", "PATCH"],
                        allow_headers=["Content-Type", "Authorization"])
+
+    origem.instalar(app, ORIGENS)
 
     @app.middleware("http")
     async def cabecalhos(request: Request, call_next):

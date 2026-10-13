@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 
 from prontuario.acesso import usuarios
 from prontuario.acesso.politica import autenticada, publica
-from prontuario.acesso.sessoes import encerrar, iniciar
+from prontuario.acesso.sessoes import encerrar, encerrar_todas, iniciar
 from prontuario.acesso.senhas import HASH_FICTICIO, MAX, motivo_de_recusa, senhas
 from prontuario.compartilhado.banco import consultar, executar
 from prontuario.compartilhado.erros import BadRequestError, UnauthorizedError
@@ -87,4 +87,5 @@ def confirmar(dados: Confirmacao):
         raise BadRequestError(motivo)
     executar("UPDATE redefinicoes SET usado = 1 WHERE token_hash = ?", sha256(dados.token))
     usuarios.trocar_hash(u["id"], senhas.hash(dados.novaSenha))
+    encerrar_todas(u["id"])          # senha nova derruba sessões antigas
     return Response(status_code=204)
