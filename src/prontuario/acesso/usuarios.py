@@ -1,4 +1,6 @@
 """Repositório de usuários. Toda consulta é parametrizada (?)."""
+import os
+
 from pwdlib import PasswordHash
 from pwdlib.hashers.argon2 import Argon2Hasher
 
@@ -45,12 +47,16 @@ SENHAS_DE_LABORATORIO = {
     "ana@hospital.dev": "cajueiro-em-flor-no-quintal",
     "bruno@hospital.dev": "barco-azul-no-delta",
     "carla@hospital.dev": "rede-na-varanda-de-tarde",
+    "eva@hospital.dev": "mangueira-no-fim-da-rua",
 }
+# Segredo TOTP de LABORATÓRIO da Dra. Eva (capítulo 8), no README.
+TOTP_DE_LABORATORIO = "5SCWGB6S2EW3ODL6YVCBVS4HUJDGETQJ"
 _SEMENTE = [
     {"id": "u1", "nome": "Admin Geral", "email": "admin@hospital.dev", "papel": "admin"},
     {"id": "u2", "nome": "Dra. Ana", "email": "ana@hospital.dev", "papel": "profissional"},
     {"id": "u3", "nome": "Dr. Bruno", "email": "bruno@hospital.dev", "papel": "profissional"},
     {"id": "u4", "nome": "Carla", "email": "carla@hospital.dev", "papel": "recepcao"},
+    {"id": "u5", "nome": "Dra. Eva", "email": "eva@hospital.dev", "papel": "profissional"},
 ]
 # Bruno foi cadastrado num sistema antigo, com parâmetros fracos:
 # o login dele mostra o rehash transparente (capítulo 4).
@@ -60,3 +66,7 @@ if not consultar("SELECT id FROM usuarios"):
     for u in _SEMENTE:
         s = SENHAS_DE_LABORATORIO[u["email"]]
         criar({**u, "passwordHash": (_LEGADO if u["id"] == "u3" else senhas).hash(s)})
+    # Eva já usa segundo fator; Ana tem login federado vinculado (cap. 8).
+    executar("INSERT INTO mfa VALUES ('u5', ?, 1, 0)", TOTP_DE_LABORATORIO)
+    executar("INSERT INTO identidades_externas VALUES (?, 'ana-no-provedor', 'u2')",
+             os.environ.get("OIDC_ISSUER", "http://localhost:8080/realms/hospital"))
