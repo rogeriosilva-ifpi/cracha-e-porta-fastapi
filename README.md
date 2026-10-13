@@ -11,3 +11,6 @@ uv run pytest
 uv run python scripts/censo.py
 python placar.py ataques.http --base http://localhost:8000
 ```
+
+`prompts/` traz os prompts complementares de cada capítulo (variante
+C-P-T-R-F-A e revisão). Leia na branch principal.
