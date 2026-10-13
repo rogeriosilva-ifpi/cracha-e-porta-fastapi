@@ -1,17 +1,15 @@
 """Refresh tokens opacos, em famílias, com rotação e detecção de
 reuso (capítulo 7). Família = um login de app num dispositivo."""
 import hashlib
-import json
-import logging
 import secrets
 import time
 import uuid
 
 from prontuario.compartilhado.banco import consultar, executar
+from prontuario.compartilhado.eventos import registrar
 
 REFRESH_MS = 7 * 24 * 3600 * 1000    # parado 7 dias: morre
 FAMILIA_MS = 30 * 24 * 3600 * 1000   # 30 dias: login de novo
-log = logging.getLogger("prontuario.seguranca")
 
 
 def _sha256(s: str) -> str:
@@ -56,8 +54,7 @@ def girar(token: str) -> dict | None:
     if mudou == 0:
         if r[0]["usado"]:               # já foi trocado: alguém o copiou
             revogar_familia(f["id"])
-            log.warning(json.dumps({"evento": "refresh_reutilizado",
-                                    "familia": f["id"], "usuario": f["usuario_id"]}))
+            registrar("refresh_reutilizado", familia=f["id"], usuario=f["usuario_id"])
         return None
     return {"usuario_id": f["usuario_id"], "familia": f["id"],
             "refresh": _novo_refresh(f["id"])}

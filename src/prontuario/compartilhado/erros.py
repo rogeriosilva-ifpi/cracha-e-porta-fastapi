@@ -24,3 +24,11 @@ class ForbiddenError(HttpError):
 
 class NotFoundError(HttpError):
     status, mensagem = 404, "Recurso não encontrado."
+
+
+class TooManyRequestsError(HttpError):
+    status, mensagem = 429, "Muitas tentativas. Tente mais tarde."
+
+    def __init__(self, retry_after_s: int, mensagem: str | None = None):
+        super().__init__(mensagem)
+        self.retry_after_s = retry_after_s

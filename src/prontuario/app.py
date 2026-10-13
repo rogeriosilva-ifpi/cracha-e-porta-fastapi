@@ -3,6 +3,7 @@ import os
 from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
+from prontuario.acesso.limites import limitador
 from prontuario.acesso.politica import publica
 from prontuario.admin import rotas as admin
 from prontuario.atendimentos import rotas as atendimentos
@@ -42,6 +43,7 @@ def criar_app() -> FastAPI:
     def health():
         return {"status": "ok"}
 
+    app.state.limiter = limitador     # slowapi (capítulo 9)
     for m in (pacientes, atendimentos, prescricoes, admin, auth, oidc):
         app.include_router(m.router)
 

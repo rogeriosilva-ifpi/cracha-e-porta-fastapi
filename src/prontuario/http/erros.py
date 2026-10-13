@@ -9,7 +9,9 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from prontuario.compartilhado.erros import HttpError
+from slowapi.errors import RateLimitExceeded
+
+from prontuario.compartilhado.erros import HttpError, TooManyRequestsError
 
 log = logging.getLogger("prontuario")
 
@@ -17,7 +19,13 @@ log = logging.getLogger("prontuario")
 def instalar(app: FastAPI) -> None:
     @app.exception_handler(HttpError)
     async def http_error(_: Request, e: HttpError):
-        return JSONResponse({"error": e.mensagem}, status_code=e.status)
+        cab = {"Retry-After": str(e.retry_after_s)} if isinstance(e, TooManyRequestsError) else None
+        return JSONResponse({"error": e.mensagem}, status_code=e.status, headers=cab)
+
+    @app.exception_handler(RateLimitExceeded)          # limite por IP (slowapi)
+    async def limite_ip(_: Request, e: RateLimitExceeded):
+        return JSONResponse({"error": TooManyRequestsError.mensagem}, status_code=429,
+                            headers={"Retry-After": "900"})
 
     @app.exception_handler(RequestValidationError)
     async def validacao(_: Request, e: RequestValidationError):

@@ -9,13 +9,16 @@ from pydantic import BaseModel, Field
 from prontuario.acesso import usuarios
 from prontuario.acesso.politica import autenticada, publica
 from prontuario.acesso.sessoes import encerrar, encerrar_todas, iniciar
+from prontuario.acesso.limites import POR_IP, bloqueio, limitador, limpar_falhas, registrar_falha
 from prontuario.acesso.mfa import (abrir_desafio, ativar, iniciar_cadastro, mfa_ativo,
                                    resolver_desafio)
 from prontuario.acesso.refresh import abrir_familia, girar, revogar_familia, revogar_todas
 from prontuario.acesso.tokens import ACCESS_S, emitir_access, jwks
 from prontuario.acesso.senhas import HASH_FICTICIO, MAX, motivo_de_recusa, senhas
 from prontuario.compartilhado.banco import consultar, executar
-from prontuario.compartilhado.erros import BadRequestError, UnauthorizedError
+from prontuario.compartilhado.erros import BadRequestError, TooManyRequestsError, UnauthorizedError
+from prontuario.compartilhado.eventos import conta_anonima
+from prontuario.compartilhado.eventos import registrar as evento
 
 router = APIRouter()
 FALHA = "Credenciais inválidas."     # a mesma para todo erro
@@ -32,17 +35,27 @@ class Login(BaseModel):
     senha: str = Field(max_length=MAX)
 
 
-def conferir(dados: Login) -> dict:
-    """Confere e-mail e senha (capítulo 4). Toda falha é a mesma."""
+def conferir(dados: Login, request: Request) -> dict:
+    """Confere e-mail e senha (capítulos 4 e 9). Toda falha é a mesma."""
+    ip = request.client.host if request.client else ""
+    espera = bloqueio(dados.email, request)     # antes de gastar argon2
+    if espera:
+        evento("conta_limitada", conta=conta_anonima(dados.email), ip=ip)
+        raise TooManyRequestsError(espera)
     u = usuarios.por_email(dados.email)
     if u is None:
         senhas.verify(dados.senha, HASH_FICTICIO)   # mesmo custo
-        raise UnauthorizedError(FALHA)
-    ok, novo_hash = senhas.verify_and_update(dados.senha, u["passwordHash"])
+        ok, novo_hash = False, None
+    else:
+        ok, novo_hash = senhas.verify_and_update(dados.senha, u["passwordHash"])
     if not ok:
+        registrar_falha(dados.email, request)
+        evento("login_falhou", usuario=u and u["id"], conta=conta_anonima(dados.email), ip=ip)
         raise UnauthorizedError(FALHA)
+    limpar_falhas(dados.email, request)
     if novo_hash:                    # parâmetros antigos: refaz o hash
         usuarios.trocar_hash(u["id"], novo_hash)
+    evento("login_ok", usuario=u["id"], ip=ip)
     return u
 
 
@@ -54,8 +67,9 @@ def par(usuario_id: str, familia: str, refresh: str) -> dict:
 
 # Navegador: sessão em cookie (capítulo 5).
 @router.post("/api/auth/login", dependencies=[Depends(publica())])
+@limitador.limit(POR_IP)
 def login(dados: Login, request: Request, response: Response):
-    u = conferir(dados)
+    u = conferir(dados, request)
     if mfa_ativo(u["id"]):            # senha certa ainda não é login
         return {"mfa_requerido": True, "desafio": abrir_desafio(u["id"], "cookie")}
     iniciar(request, response, u["id"])
@@ -64,8 +78,9 @@ def login(dados: Login, request: Request, response: Response):
 
 # Clientes de API (app, integrações): token Bearer (capítulo 6).
 @router.post("/api/auth/token", dependencies=[Depends(publica())])
-def token(dados: Login):
-    u = conferir(dados)
+@limitador.limit(POR_IP)
+def token(dados: Login, request: Request):
+    u = conferir(dados, request)
     if mfa_ativo(u["id"]):
         return {"mfa_requerido": True, "desafio": abrir_desafio(u["id"], "token")}
     familia, refresh = abrir_familia(u["id"])
@@ -79,9 +94,11 @@ class Verificacao(BaseModel):
 
 # Segundo passo do login de quem tem MFA (capítulo 8).
 @router.post("/api/auth/mfa/verificar", dependencies=[Depends(publica())])
+@limitador.limit(POR_IP)
 def verificar_mfa(dados: Verificacao, request: Request, response: Response):
     r = resolver_desafio(dados.desafio, dados.codigo.strip())
     if r is None:
+        evento("mfa_falhou", ip=request.client.host if request.client else "")
         raise UnauthorizedError("Código inválido.")
     if r["canal"] == "cookie":
         iniciar(request, response, r["usuario_id"])
@@ -117,7 +134,8 @@ class Renovacao(BaseModel):
 
 # Troca o refresh por um par novo (capítulo 7).
 @router.post("/api/auth/refresh", dependencies=[Depends(publica())])
-def renovar(dados: Renovacao):
+@limitador.limit(POR_IP)
+def renovar(dados: Renovacao, request: Request):
     g = girar(dados.refresh_token)
     if g is None:
         raise UnauthorizedError()
@@ -129,6 +147,7 @@ def renovar(dados: Renovacao):
 def sair_de_todos(usuario: dict = Depends(autenticada())):
     encerrar_todas(usuario["id"])     # cookies
     revogar_todas(usuario["id"])      # apps
+    evento("saiu_de_todos", usuario=usuario["id"])
     return Response(status_code=204)
 
 
@@ -159,7 +178,8 @@ class Solicitacao(BaseModel):
 
 
 @router.post("/api/auth/reset/solicitar", status_code=202, dependencies=[Depends(publica())])
-def solicitar(dados: Solicitacao):
+@limitador.limit(POR_IP)
+def solicitar(dados: Solicitacao, request: Request):
     u = usuarios.por_email(dados.email)
     if u:
         token = secrets.token_urlsafe(32)
@@ -176,7 +196,8 @@ class Confirmacao(BaseModel):
 
 
 @router.post("/api/auth/reset/confirmar", status_code=204, dependencies=[Depends(publica())])
-def confirmar(dados: Confirmacao):
+@limitador.limit(POR_IP)
+def confirmar(dados: Confirmacao, request: Request):
     r = consultar("SELECT * FROM redefinicoes WHERE token_hash = ?", sha256(dados.token))
     if not r or r[0]["usado"] or r[0]["expira_em"] < time.time() * 1000:
         raise BadRequestError("Código inválido ou expirado.")
@@ -188,4 +209,5 @@ def confirmar(dados: Confirmacao):
     usuarios.trocar_hash(u["id"], senhas.hash(dados.novaSenha))
     encerrar_todas(u["id"])          # senha nova derruba sessões antigas
     revogar_todas(u["id"])           # e os apps conectados
+    evento("senha_redefinida", usuario=u["id"])
     return Response(status_code=204)
