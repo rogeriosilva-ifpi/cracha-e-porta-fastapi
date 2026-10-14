@@ -15,6 +15,12 @@ class Alteracao(BaseModel):
     status: Literal["aberto", "finalizado"] | None = None
 
 
+# VERSÃO INGÊNUA (cap12-antes): devolve todos; "o front filtra".
+@router.get("/api/encounters", dependencies=[Depends(exige("encounter:read"))])
+def listar():
+    return db.atendimentos
+
+
 @router.get("/api/encounters/{id}", dependencies=[Depends(exige("encounter:read"))])
 def obter(id: str):
     e = buscar(db.atendimentos, id)

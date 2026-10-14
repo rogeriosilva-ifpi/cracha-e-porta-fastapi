@@ -3,7 +3,7 @@ import hashlib
 import secrets
 import time
 
-from fastapi import APIRouter, Depends, Request, Response
+from fastapi import APIRouter, Body, Depends, Request, Response
 from pydantic import BaseModel, Field
 
 from prontuario.acesso import usuarios
@@ -171,6 +171,13 @@ def logout(request: Request):
 @router.get("/api/auth/me")
 def me(usuario: dict = Depends(autenticada())):
     return {"usuario": usuarios.publico(usuario)}
+
+
+# Editar o próprio perfil. VERSÃO INGÊNUA (cap12-antes).
+@router.patch("/api/auth/me")
+def editar_perfil(dados: dict = Body(...), usuario: dict = Depends(autenticada())):
+    usuarios.atualizar(usuario["id"], dados)
+    return {"usuario": usuarios.publico(usuarios.por_id(usuario["id"]))}
 
 
 class Solicitacao(BaseModel):
