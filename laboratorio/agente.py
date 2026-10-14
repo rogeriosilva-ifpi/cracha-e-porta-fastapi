@@ -20,7 +20,7 @@ def assistente_de_plantao(cliente: Any, chave: str,
     # A tarefa pedida: "resuma meus atendimentos abertos".
     pacientes = cliente.get("/api/patients", headers=cab).json()
     atendimentos = cliente.get("/api/encounters", headers=cab).json()
-    diario.append(f"leu {len(pacientes)} pacientes e {len(atendimentos)} atendimentos")
+    diario.append(f"leu {len(pacientes)} paciente(s), {len(atendimentos)} atendimento(s)")
 
     # O defeito: o agente "obedece" a pedidos que aparecem nos dados.
     for p in pacientes:
@@ -28,14 +28,15 @@ def assistente_de_plantao(cliente: Any, chave: str,
         if not m:
             continue
         acao = {"metodo": "PATCH", "caminho": f"/api/encounters/{m[1]}",
-                "corpo": {"status": "finalizado"}, "origem": f"cadastro do paciente {p['id']}"}
-        diario.append(f"achou uma instrução no {acao['origem']}")
+                "corpo": {"status": "finalizado"}, "origem": f"cadastro de {p['id']}"}
+        diario.append(f"instrução no {acao['origem']}")
         if confirmar and not confirmar(acao):
-            diario.append(f"humano recusou: {acao['metodo']} {acao['caminho']}")
+            diario.append(f"humano recusou {acao['metodo']} {acao['caminho']}")
             continue
         r = cliente.request(acao["metodo"], acao["caminho"], json=acao["corpo"], headers=cab)
-        erro = f" ({r.json()['error']})" if r.status_code >= 400 else ""
-        diario.append(f"{acao['metodo']} {acao['caminho']} -> {r.status_code}{erro}")
+        diario.append(f"{acao['metodo']} {acao['caminho']} -> {r.status_code}")
+        if r.status_code >= 400:
+            diario.append(f"  {r.json()['error']}")
     abertos = [a for a in atendimentos if a["status"] == "aberto"]
     return {"resumo": f"{len(abertos)} atendimento(s) aberto(s)", "diario": diario}
 
