@@ -8,7 +8,7 @@ from prontuario.compartilhado.config import config
 from prontuario.acesso.politica import publica
 from prontuario.admin import rotas as admin
 from prontuario.atendimentos import rotas as atendimentos
-from prontuario.auth import oidc
+from prontuario.auth import chaves, oidc
 from prontuario.auth import rotas as auth
 from prontuario.http import erros, origem
 from prontuario.pacientes import rotas as pacientes
@@ -27,7 +27,7 @@ def criar_app() -> FastAPI:
     # BORDA: origem e cabeçalhos de segurança.
     app.add_middleware(CORSMiddleware, allow_origins=ORIGENS,
                        allow_credentials=True,
-                       allow_methods=["GET", "POST", "PATCH"],
+                       allow_methods=["GET", "POST", "PATCH", "DELETE"],
                        allow_headers=["Content-Type", "Authorization"])
 
     origem.instalar(app, ORIGENS)
@@ -45,7 +45,7 @@ def criar_app() -> FastAPI:
         return {"status": "ok"}
 
     app.state.limiter = limitador     # slowapi (capítulo 9)
-    for m in (pacientes, atendimentos, prescricoes, admin, auth, oidc):
+    for m in (pacientes, atendimentos, prescricoes, admin, auth, oidc, chaves):
         app.include_router(m.router)
 
     erros.instalar(app)  # FIM DO PIPELINE: todo erro passa por aqui

@@ -11,7 +11,8 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from slowapi.errors import RateLimitExceeded
 
-from prontuario.compartilhado.erros import HttpError, TooManyRequestsError
+from prontuario.auth.chaves import METADADOS_URL
+from prontuario.compartilhado.erros import HttpError, TooManyRequestsError, UnauthorizedError
 
 log = logging.getLogger("prontuario")
 
@@ -19,7 +20,9 @@ log = logging.getLogger("prontuario")
 def instalar(app: FastAPI) -> None:
     @app.exception_handler(HttpError)
     async def http_error(_: Request, e: HttpError):
-        cab = {"Retry-After": str(e.retry_after_s)} if isinstance(e, TooManyRequestsError) else None
+        cab = {"Retry-After": str(e.retry_after_s)} if isinstance(e, TooManyRequestsError) else {}
+        if isinstance(e, UnauthorizedError):   # RFC 9728: onde ler como se autenticar
+            cab["WWW-Authenticate"] = f'Bearer resource_metadata="{METADADOS_URL}"'
         return JSONResponse({"error": e.mensagem}, status_code=e.status, headers=cab)
 
     @app.exception_handler(RateLimitExceeded)          # limite por IP (slowapi)

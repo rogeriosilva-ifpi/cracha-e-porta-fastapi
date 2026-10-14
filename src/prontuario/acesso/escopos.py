@@ -7,6 +7,7 @@ from fastapi.security import SecurityScopes
 
 from prontuario.acesso.identidade import identificar
 from prontuario.acesso.permissoes import pode
+from prontuario.acesso.politica import dentro_do_escopo
 from prontuario.compartilhado.erros import ForbiddenError, UnauthorizedError
 
 
@@ -16,4 +17,6 @@ def com_escopos(security_scopes: SecurityScopes, request: Request) -> dict:
         raise UnauthorizedError()
     if not all(pode(usuario["papel"], e) for e in security_scopes.scopes):
         raise ForbiddenError("Permissão insuficiente.")  # portão 2
+    for e in security_scopes.scopes:                     # portão 2b (cap. 15)
+        dentro_do_escopo(request, e)
     return usuario
