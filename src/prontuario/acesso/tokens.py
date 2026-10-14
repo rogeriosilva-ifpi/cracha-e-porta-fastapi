@@ -2,14 +2,19 @@
 
 Assinados com chave privada Ed25519; quem confere usa só a pública.
 """
+import base64
+import hashlib
 import json
 import secrets
 import time
 import uuid
 
 import jwt
+from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from jwt.algorithms import OKPAlgorithm
+
+from prontuario.compartilhado.config import config
 
 EMISSOR = "https://prontuario.exemplo"
 AUDIENCIA = "prontuario-api"
@@ -28,7 +33,21 @@ def nova_chave() -> None:
     del chaves[2:]                  # guarda no máximo duas
 
 
-nova_chave()
+def chave_do_pem(pem: str) -> dict:
+    """Chave vinda do ambiente (cap. 13): kid = impressão digital (RFC 7638),
+    estável entre reinícios e igual em todas as instâncias."""
+    privada = serialization.load_pem_private_key(pem.encode(), password=None)
+    jwk = json.loads(OKPAlgorithm.to_jwk(privada.public_key()))
+    canonico = json.dumps({"crv": jwk["crv"], "kty": jwk["kty"], "x": jwk["x"]},
+                          separators=(",", ":"), sort_keys=True)
+    kid = base64.urlsafe_b64encode(hashlib.sha256(canonico.encode()).digest()).rstrip(b"=").decode()
+    return {"kid": kid, "privada": privada, "publica": privada.public_key()}
+
+
+if config.chaves_jwt:
+    chaves.extend(chave_do_pem(p) for p in config.chaves_jwt)
+else:
+    nova_chave()          # desenvolvimento: chave efêmera, some no reinício
 
 
 def emissor(audiencia: str, duracao_s: int):

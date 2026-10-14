@@ -1,3 +1,5 @@
 .venv/
 __pycache__/
-.env
+# Nenhum arquivo de ambiente entra no git, exceto o exemplo (capítulo 13).
+.env*
+!.env.exemplo

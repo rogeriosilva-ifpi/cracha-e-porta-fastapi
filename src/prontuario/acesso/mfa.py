@@ -8,6 +8,7 @@ import time
 import pyotp
 
 from prontuario.compartilhado.banco import consultar, executar
+from prontuario.compartilhado.cofre import cofre
 
 PERIODO_S = 30
 DESAFIO_MS = 5 * 60 * 1000          # entre a senha e o código
@@ -19,8 +20,9 @@ def _sha256(s: str) -> str:
 
 
 def _linha(usuario_id: str) -> dict | None:
+    # O segredo TOTP é guardado CIFRADO (cap. 13): o banco sozinho não basta.
     r = consultar("SELECT * FROM mfa WHERE usuario_id = ?", usuario_id)
-    return r[0] if r else None
+    return {**r[0], "segredo": cofre.decifrar(r[0]["segredo"])} if r else None
 
 
 def mfa_ativo(usuario_id: str) -> bool:
@@ -33,7 +35,7 @@ def iniciar_cadastro(usuario_id: str, email: str) -> dict | None:
     if mfa_ativo(usuario_id):
         return None
     segredo = pyotp.random_base32(32)                 # 160 bits
-    executar("INSERT OR REPLACE INTO mfa VALUES (?, ?, 0, 0)", usuario_id, segredo)
+    executar("INSERT OR REPLACE INTO mfa VALUES (?, ?, 0, 0)", usuario_id, cofre.cifrar(segredo))
     uri = pyotp.TOTP(segredo).provisioning_uri(name=email, issuer_name="Mini-Prontuário")
     return {"segredo": segredo, "uri": uri}           # vira QR code
 

@@ -6,6 +6,7 @@ from pwdlib.hashers.argon2 import Argon2Hasher
 
 from prontuario.acesso.senhas import senhas
 from prontuario.compartilhado.banco import consultar, executar
+from prontuario.compartilhado.cofre import cofre
 
 
 def _de_linha(r: dict) -> dict:
@@ -75,6 +76,6 @@ if not consultar("SELECT id FROM usuarios"):
         s = SENHAS_DE_LABORATORIO[u["email"]]
         criar({**u, "passwordHash": (_LEGADO if u["id"] == "u3" else senhas).hash(s)})
     # Eva já usa segundo fator; Ana tem login federado vinculado (cap. 8).
-    executar("INSERT INTO mfa VALUES ('u5', ?, 1, 0)", TOTP_DE_LABORATORIO)
+    executar("INSERT INTO mfa VALUES ('u5', ?, 1, 0)", cofre.cifrar(TOTP_DE_LABORATORIO))
     executar("INSERT INTO identidades_externas VALUES (?, 'ana-no-provedor', 'u2')",
              os.environ.get("OIDC_ISSUER", "http://localhost:8080/realms/hospital"))

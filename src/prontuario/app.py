@@ -4,6 +4,7 @@ from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from prontuario.acesso.limites import limitador
+from prontuario.compartilhado.config import config
 from prontuario.acesso.politica import publica
 from prontuario.admin import rotas as admin
 from prontuario.atendimentos import rotas as atendimentos
@@ -13,7 +14,7 @@ from prontuario.http import erros, origem
 from prontuario.pacientes import rotas as pacientes
 from prontuario.prescricoes import rotas as prescricoes
 
-ORIGENS = os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",")
+ORIGENS = config.origens
 DOCS = os.getenv("PRONTUARIO_DOCS") == "1"  # mapa da API só quando pedido
 
 
