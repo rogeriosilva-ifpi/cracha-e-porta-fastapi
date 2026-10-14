@@ -52,3 +52,11 @@ def test_rota_inexistente_404_json():
 
 def test_mapa_da_api_fechado_por_padrao():
     assert cli.get("/openapi.json").status_code == 404
+
+
+def test_cors_so_para_origens_da_lista_nunca_curinga():
+    ok = cli.get("/health", headers={"Origin": "http://localhost:5173"})
+    assert ok.headers["access-control-allow-origin"] == "http://localhost:5173"
+    assert ok.headers["access-control-allow-credentials"] == "true"
+    outro = cli.get("/health", headers={"Origin": "https://site-qualquer.example"})
+    assert "access-control-allow-origin" not in outro.headers
