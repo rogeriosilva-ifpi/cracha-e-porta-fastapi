@@ -15,5 +15,5 @@ def com_escopos(security_scopes: SecurityScopes, request: Request) -> dict:
     if usuario is None:
         raise UnauthorizedError()
     if not all(pode(usuario["papel"], e) for e in security_scopes.scopes):
-        raise ForbiddenError()                           # portão 2
+        raise ForbiddenError("Permissão insuficiente.")  # portão 2
     return usuario

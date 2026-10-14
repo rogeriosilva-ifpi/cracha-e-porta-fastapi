@@ -35,7 +35,7 @@ def exige(permissao: Permissao):
         if usuario is None:
             raise UnauthorizedError()
         if not pode(usuario["papel"], permissao):      # portão 2
-            raise ForbiddenError()
+            raise ForbiddenError("Permissão insuficiente.")
         request.state.usuario = usuario
         return usuario
     politica_exige.politica = {"permissao": permissao}

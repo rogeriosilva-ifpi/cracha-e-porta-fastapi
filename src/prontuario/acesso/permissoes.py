@@ -9,17 +9,18 @@ from prontuario.compartilhado.dados import Papel
 
 Permissao = Literal[
     "patient:read", "patient:create",
-    "encounter:read", "encounter:update",
+    "encounter:read", "encounter:read_any", "encounter:update",
     "rx:read", "rx:create",
     "user:admin",
 ]
 
 MATRIZ: dict[Papel, frozenset[Permissao]] = {
     "admin": frozenset({"patient:read", "patient:create", "encounter:read",
-                        "encounter:update", "rx:read", "user:admin"}),
+                        "encounter:read_any", "encounter:update", "rx:read", "user:admin"}),
     "profissional": frozenset({"patient:read", "patient:create", "encounter:read",
                                "encounter:update", "rx:read", "rx:create"}),
-    "recepcao": frozenset({"patient:read", "patient:create", "encounter:read"}),
+    "recepcao": frozenset({"patient:read", "patient:create", "encounter:read",
+                           "encounter:read_any"}),
 }
 
 

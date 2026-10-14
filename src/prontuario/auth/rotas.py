@@ -3,8 +3,8 @@ import hashlib
 import secrets
 import time
 
-from fastapi import APIRouter, Body, Depends, Request, Response
-from pydantic import BaseModel, Field
+from fastapi import APIRouter, Depends, Request, Response
+from pydantic import BaseModel, ConfigDict, Field
 
 from prontuario.acesso import usuarios
 from prontuario.acesso.politica import autenticada, publica
@@ -173,10 +173,16 @@ def me(usuario: dict = Depends(autenticada())):
     return {"usuario": usuarios.publico(usuario)}
 
 
-# Editar o próprio perfil. VERSÃO INGÊNUA (cap12-antes).
+class Perfil(BaseModel):
+    # Só o nome. Papel e e-mail têm fluxos próprios; campo extra é 400.
+    model_config = ConfigDict(extra="forbid")
+    nome: str = Field(min_length=2, max_length=100)
+
+
+# Editar o próprio perfil.
 @router.patch("/api/auth/me")
-def editar_perfil(dados: dict = Body(...), usuario: dict = Depends(autenticada())):
-    usuarios.atualizar(usuario["id"], dados)
+def editar_perfil(dados: Perfil, usuario: dict = Depends(autenticada())):
+    usuarios.trocar_nome(usuario["id"], dados.nome)
     return {"usuario": usuarios.publico(usuarios.por_id(usuario["id"]))}
 
 

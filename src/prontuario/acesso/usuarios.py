@@ -37,11 +37,8 @@ def criar(u: dict) -> dict:
     return u
 
 
-def atualizar(id_: str, dados: dict) -> None:
-    """VERSÃO INGÊNUA (cap12-antes): grava o que vier."""
-    novo = {**por_id(id_), **dados}
-    executar("UPDATE usuarios SET nome = ?, email = ?, papel = ? WHERE id = ?",
-             novo["nome"], novo["email"], novo["papel"], id_)
+def trocar_nome(id_: str, nome: str) -> None:
+    executar("UPDATE usuarios SET nome = ? WHERE id = ?", nome, id_)
 
 
 def trocar_papel(id_: str, papel: str) -> None:

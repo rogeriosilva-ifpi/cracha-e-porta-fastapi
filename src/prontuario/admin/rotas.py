@@ -26,7 +26,7 @@ class NovoUsuario(BaseModel):
 
 @router.get("/api/admin/users", dependencies=[Depends(exige("user:admin"))])
 def listar():
-    return usuarios.listar()
+    return [usuarios.publico(u) for u in usuarios.listar()]   # nunca o hash
 
 
 @router.post("/api/admin/users", status_code=201, dependencies=[Depends(exige("user:admin"))])
@@ -36,7 +36,7 @@ def criar(dados: NovoUsuario):
     motivo = motivo_de_recusa(senha, d["email"])
     if motivo:
         raise BadRequestError(motivo)
-    return usuarios.criar({"id": novo_id("u"), **d, "passwordHash": senhas.hash(senha)})
+    return usuarios.publico(usuarios.criar({"id": novo_id("u"), **d, "passwordHash": senhas.hash(senha)}))
 
 
 # Desligamento: derruba sessões e apps. Função administrativa:

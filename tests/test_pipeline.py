@@ -30,9 +30,10 @@ def test_portao2_nem_admin_prescreve():
     assert r.status_code == 403
 
 
-def test_profissional_prescreve():
+def test_profissional_prescreve_no_proprio_atendimento_de_plantao(plantao):
+    plantao(10)                                   # plantão diurno da Ana
     r = cli.post("/api/encounters/e1/medication-requests", headers=como("ana@hospital.dev"),
-                 json={"medicamento": "AAS 100 mg", "posologia": "1x ao dia", "profissionalId": "u2"})
+                 json={"medicamento": "AAS 100 mg", "posologia": "1x ao dia"})
     assert r.status_code == 201
 
 

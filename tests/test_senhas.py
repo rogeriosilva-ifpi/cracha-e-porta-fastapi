@@ -46,6 +46,8 @@ def test_login_sem_hash_na_resposta():
 
 
 def test_rehash_transparente():
+    # outro teste pode ter logado o Bruno antes: volta ao hash legado
+    usuarios.trocar_hash("u3", usuarios._LEGADO.hash("barco-azul-no-delta"))
     assert "m=4096" in usuarios.por_id("u3")["passwordHash"]
     assert login("bruno@hospital.dev", "barco-azul-no-delta").status_code == 200
     assert "m=19456" in usuarios.por_id("u3")["passwordHash"]
