@@ -1,0 +1,13 @@
+# Portões de segurança em todo push e PR (capítulo 14).
+name: seguranca
+on: [push, pull_request]
+jobs:
+  portoes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # a varredura lê o histórico inteiro
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --locked     # exatamente o uv.lock revisado
+      - run: bash scripts/portoes.sh
